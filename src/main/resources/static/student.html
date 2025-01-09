@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Online Egyetemi Rendszer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 20px;
+            background-image: url('https://images2.alphacoders.com/720/thumb-1920-720843.jpg');
+            background-size: cover;
+            background-position: center;
+            color: #fff;
+        }
+        .container {
+            max-width: 800px;
+            margin: auto;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        .menu {
+            margin-bottom: 20px;
+        }
+        .menu button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            font-size: 16px;
+            background-color: #0078d7;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .menu button:hover {
+            background-color: #005bb5;
+        }
+        .content {
+            display: none;
+        }
+        .content.active {
+            display: block;
+        }
+        .exam-list {
+            margin-top: 10px;
+        }
+        .exam-list button {
+            margin-top: 5px;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Online Egyetemi Rendszer</h1>
+    <div class="menu">
+        <button onclick="showContent('fomenu')">Főmenü</button>
+        <button onclick="loadExams()">Elérhető vizsgák</button>
+        <button onclick="loadMyExams()">Felvett vizsgáim</button>
+        <button onclick="logout()">Felhasználó kijelentkezése</button>
+    </div>
+
+    <div id="fomenu" class="content active">
+        <h2>Főmenü</h2>
+        <p>Üdvözöljük az Online Egyetemi Rendszerben! Válasszon egy opciót a menüből.</p>
+    </div>
+
+    <div id="vizsgak" class="content">
+        <h2>Elérhető vizsgák</h2>
+        <div id="exam-list" class="exam-list"></div>
+        <button onclick="showContent('fomenu')">Vissza a főmenübe</button>
+    </div>
+
+    <div id="my-vizsgak" class="content">
+        <h2>Felvett vizsgáim</h2>
+        <div id="my-exam-list" class="exam-list"></div>
+        <button onclick="showContent('fomenu')">Vissza a főmenübe</button>
+    </div>
+
+    <script>
+        function showContent(id) {
+            const contents = document.querySelectorAll('.content');
+            contents.forEach(content => content.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+        }
+
+        function loadExams() {
+            const userId = localStorage.getItem('userId');
+
+            fetch(`/api/exams?userId=${userId}`)
+                .then(response => response.json())
+                .then(data => {
+                    const list = document.getElementById('exam-list');
+                    list.innerHTML = '';
+                    if (data.length === 0) {
+                        list.innerHTML = '<p>Nincs elérhető vizsga.</p>';
+                    } else {
+                        data.forEach(exam => {
+                            const button = document.createElement('button');
+                            button.textContent = exam.name;
+                            button.onclick = () => register(exam.id);
+                            list.appendChild(button);
+                        });
+                    }
+                    showContent('vizsgak');
+                })
+                .catch(error => {
+                    console.error('Hiba az elérhető vizsgák betöltésekor:', error);
+                });
+        }
+
+        function register(examId) {
+            const userId = localStorage.getItem('userId');
+            fetch('/api/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ userId, examId })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    alert(data.message);
+                    loadExams();
+                })
+                .catch(error => {
+                    console.error('Hiba a vizsgára jelentkezéskor:', error);
+                });
+        }
+
+        function loadMyExams() {
+            const userId = localStorage.getItem('userId');
+
+            fetch(`/api/my-exams?userId=${userId}`)
+                .then(response => response.json())
+                .then(data => {
+                    const list = document.getElementById('my-exam-list');
+                    list.innerHTML = '';
+                    if (data.length === 0) {
+                        list.innerHTML = '<p>Nincsenek felvett vizsgák.</p>';
+                    } else {
+                        data.forEach(exam => {
+                            const button = document.createElement('button');
+                            button.textContent = `Törlés: ${exam.name}`;
+                            button.onclick = () => unregister(exam.id);
+                            list.appendChild(button);
+                        });
+                    }
+                    showContent('my-vizsgak');
+                })
+                .catch(error => {
+                    console.error('Hiba a felvett vizsgák betöltésekor:', error);
+                });
+        }
+
+        function unregister(examId) {
+            const userId = localStorage.getItem('userId');
+            fetch('/api/unregister', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ userId, examId })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    alert(data.message);
+                    loadMyExams();
+                })
+                .catch(error => {
+                    console.error('Hiba a vizsgajelentkezés törlésekor:', error);
+                });
+        }
+
+        function logout() {
+            alert('Kijelentkezés sikeres!');
+            localStorage.removeItem('userId');
+            location.href = 'index.html';
+        }
+    </script>
+</div>
+</body>
+</html>
